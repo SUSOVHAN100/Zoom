@@ -2,22 +2,15 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-
-def _get_database_url() -> str:
-    # Explicit env var wins (set this on Render)
-    env_url = os.environ.get("DATABASE_URL")
-    if env_url:
-        return env_url
-
-    # On Render with disk mounted at /data
-    if os.path.isdir("/data"):
-        return "sqlite:////data/zoom_clone.db"
-
-    # Fallback: local development (relative path)
-    return "sqlite:///./zoom_clone.db"
-
-
-SQLALCHEMY_DATABASE_URL = _get_database_url()
+# Use the working directory for SQLite - always writable on Render and locally.
+# Render's working directory is /opt/render/project/src/
+# Override with DATABASE_URL env var only if it's NOT pointing to /data (which requires a paid disk).
+_env_url = os.environ.get("DATABASE_URL", "")
+if _env_url and "/data" not in _env_url:
+    SQLALCHEMY_DATABASE_URL = _env_url
+else:
+    # Default: relative path, works locally and on Render free tier
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./zoom_clone.db"
 
 # SQLAlchemy engine
 # connect_args={"check_same_thread": False} is required only for SQLite
