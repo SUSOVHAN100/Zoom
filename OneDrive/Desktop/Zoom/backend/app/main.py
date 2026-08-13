@@ -9,7 +9,11 @@ from app import models
 async def lifespan(app: FastAPI):
     # Ensure database tables are created
     Base.metadata.create_all(bind=engine)
+    # Seed the default user (idempotent — safe to run every startup)
+    from app.database.seed import seed_db
+    seed_db()
     yield
+
 
 app = FastAPI(
     title="Zoom Clone API",
