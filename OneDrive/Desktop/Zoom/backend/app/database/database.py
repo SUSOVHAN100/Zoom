@@ -1,8 +1,12 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-# SQLite database URL
-SQLALCHEMY_DATABASE_URL = "sqlite:///./zoom_clone.db"
+# Use DATABASE_URL env var in production (Render persistent disk),
+# fall back to a local SQLite file for development.
+SQLALCHEMY_DATABASE_URL = os.environ.get(
+    "DATABASE_URL", "sqlite:///./zoom_clone.db"
+)
 
 # SQLAlchemy engine
 # connect_args={"check_same_thread": False} is required only for SQLite

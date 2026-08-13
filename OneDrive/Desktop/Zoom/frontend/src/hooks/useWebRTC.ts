@@ -61,8 +61,11 @@ export function useWebRTC(meetingId: string, clientId: string, displayName: stri
       if (!active) return;
 
       // Connect to FastAPI WebSocket signaling server
-      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsScheme}//localhost:8000/ws/${meetingId}?client_id=${clientId}`;
+      // Use NEXT_PUBLIC_WS_URL in production (e.g. wss://zoomspace-backend.onrender.com)
+      // Fall back to the current browser host in dev (localhost:8000)
+      const wsBase = process.env.NEXT_PUBLIC_WS_URL ||
+        `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000`;
+      const wsUrl = `${wsBase}/ws/${meetingId}?client_id=${clientId}`;
       console.log(`Connecting to signaling WebSocket: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
