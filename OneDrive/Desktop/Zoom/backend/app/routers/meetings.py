@@ -53,10 +53,14 @@ def schedule_meeting(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+from app.dependencies import get_current_user
+from app.models.user import User
+
 @router.post("/join", response_model=JoinResponse)
 def join_meeting(
     payload: MeetingJoinRequest, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
 ):
     """
     Joins a meeting using a unique meeting_id or invite token.
@@ -66,7 +70,8 @@ def join_meeting(
         meeting, participant = meeting_service.join_meeting(
             db, 
             meeting_id_or_token=payload.meeting_id_or_token, 
-            display_name=payload.display_name
+            display_name=payload.display_name,
+            current_user=current_user
         )
         return {"meeting": meeting, "participant": participant}
     except ValueError as e:

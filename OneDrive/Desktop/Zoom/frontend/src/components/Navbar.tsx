@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { usePresence } from '../hooks/usePresence';
 
 export default function Navbar() {
+  const { stats } = usePresence();
+
   return (
     <header style={{
       width: '100%',
@@ -56,7 +59,7 @@ export default function Navbar() {
           gap: '6px'
         }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }}></span>
-          <span>Online</span>
+          <span>{stats.online_users} Online</span>
         </div>
 
         {/* Settings button placeholder */}

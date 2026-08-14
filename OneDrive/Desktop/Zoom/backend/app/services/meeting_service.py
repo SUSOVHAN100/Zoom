@@ -52,6 +52,14 @@ def create_instant_meeting(db: Session, title: Optional[str] = None, description
         invite_url=invite_url
     )
     db.add(meeting_link)
+    
+    # Create the host participant exactly once
+    host_participant = Participant(
+        meeting_id=meeting.id,
+        display_name=user.name,
+        is_host=True
+    )
+    db.add(host_participant)
     db.commit()
     db.refresh(meeting)
     return meeting
@@ -93,6 +101,14 @@ def schedule_meeting(db: Session, title: str, description: Optional[str], schedu
         invite_url=invite_url
     )
     db.add(meeting_link)
+    
+    # Create the host participant exactly once
+    host_participant = Participant(
+        meeting_id=meeting.id,
+        display_name=user.name,
+        is_host=True
+    )
+    db.add(host_participant)
     db.commit()
     db.refresh(meeting)
     return meeting
@@ -101,7 +117,7 @@ def get_meeting_by_id(db: Session, meeting_id: str) -> Optional[Meeting]:
     """Fetches a meeting by its unique meeting_id identifier."""
     return db.query(Meeting).filter(Meeting.meeting_id == meeting_id).first()
 
-def join_meeting(db: Session, meeting_id_or_token: str, display_name: str) -> Tuple[Meeting, Participant]:
+def join_meeting(db: Session, meeting_id_or_token: str, display_name: str, current_user: Optional[User] = None) -> Tuple[Meeting, Participant]:
     """
     Registers a participant to a meeting using either the meeting_id or invite_token.
     Validates existence of the meeting and correctness of the display name.
@@ -122,16 +138,35 @@ def join_meeting(db: Session, meeting_id_or_token: str, display_name: str) -> Tu
     if not meeting:
         raise KeyError("Meeting not found. Verify the meeting ID or invite token.")
         
-    # Create participant record
+    # Check if the joining user is the actual host (based on identity-based auth)
+    is_host = False
+    if current_user and current_user.id == meeting.host_id:
+        is_host = True
+
+    # If they are the host, reuse the existing pre-created host participant record
+    if is_host:
+        existing_host = db.query(Participant).filter(
+            Participant.meeting_id == meeting.id,
+            Participant.is_host == True
+        ).first()
+        if existing_host:
+            existing_host.left_at = None  # Reactivate host participant
+            db.commit()
+            db.refresh(existing_host)
+            db.refresh(meeting)
+            return meeting, existing_host
+
+    # Create participant record for guest
     participant = Participant(
         meeting_id=meeting.id,
         display_name=clean_name,
-        is_host=(clean_name == "Default User")
+        is_host=False
     )
     db.add(participant)
     db.commit()
     db.refresh(participant)
     db.refresh(meeting)
+    
     return meeting, participant
 
 def get_upcoming_meetings(db: Session) -> List[Meeting]:

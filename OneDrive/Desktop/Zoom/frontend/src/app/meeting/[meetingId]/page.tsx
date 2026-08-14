@@ -25,6 +25,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   const [joined, setJoined] = useState(false);
   const [participantId, setParticipantId] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isHost, setIsHost] = useState(false);
 
   const handleCopyLink = () => {
     const url = meeting?.meeting_link?.invite_url || `${window.location.origin}/meeting/${meetingId}`;
@@ -77,16 +78,47 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
   // Check sessionStorage on mount
   useEffect(() => {
     const storedName = sessionStorage.getItem('display_name');
-    const storedPartId = sessionStorage.getItem('participant_id');
+    const storedPartId = sessionStorage.getItem(`meeting_participant_${meetingId}`);
 
     // 1. Fetch meeting details to verify room existence
     apiService.getMeetingDetails(meetingId)
-      .then(meetingData => {
+      .then(async (meetingData) => {
         setMeeting(meetingData);
         
-        if (storedName && storedPartId) {
+        // Identity-based host verification
+        const currentUserId = sessionStorage.getItem('user_id');
+        const isHostUser = currentUserId && meetingData.host_id.toString() === currentUserId;
+        setIsHost(!!isHostUser);
+
+        if (isHostUser && meetingData.host_participant) {
+          const hostPartId = meetingData.host_participant.id;
+          const hostPartName = meetingData.host_participant.display_name;
+          
+          setDisplayName(hostPartName);
+          setParticipantId(hostPartId);
+          sessionStorage.setItem('display_name', hostPartName);
+          sessionStorage.setItem(`meeting_participant_${meetingId}`, hostPartId.toString());
+
+          // Re-activate if left previously
+          if (meetingData.host_participant.left_at) {
+            try {
+              await apiService.rejoinParticipant(hostPartId);
+            } catch (err) {
+              console.error("Failed to reactivate host participant:", err);
+            }
+          }
+          setJoined(true);
+        } else if (storedName && storedPartId) {
+          const partId = parseInt(storedPartId, 10);
           setDisplayName(storedName);
-          setParticipantId(parseInt(storedPartId, 10));
+          setParticipantId(partId);
+          
+          // Re-verify if participant needs to be reactivated/rejoined
+          try {
+            await apiService.rejoinParticipant(partId);
+          } catch (err) {
+            console.error("Failed to rejoin participant:", err);
+          }
           setJoined(true);
         }
         setLoading(false);
@@ -156,7 +188,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
       const response = await apiService.joinMeeting(meetingId, cleanName);
       
       sessionStorage.setItem('display_name', cleanName);
-      sessionStorage.setItem('participant_id', response.participant.id.toString());
+      sessionStorage.setItem(`meeting_participant_${meetingId}`, response.participant.id.toString());
       
       setParticipantId(response.participant.id);
       setJoined(true);
@@ -182,7 +214,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
     }
     
     sessionStorage.removeItem('display_name');
-    sessionStorage.removeItem('participant_id');
+    sessionStorage.removeItem(`meeting_participant_${meetingId}`);
     
     router.push('/');
   };
@@ -446,7 +478,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
             <h3 style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'var(--font-display)', color: 'var(--text-main)' }}>
               Participants ({activeParticipants.length + 1})
             </h3>
-            {displayName === 'Default User' && activeParticipants.length > 0 && (
+            {isHost && activeParticipants.length > 0 && (
               <button
                 className="btn-action"
                 style={{
@@ -506,7 +538,7 @@ export default function MeetingRoomPage({ params }: MeetingRoomProps) {
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  {displayName === 'Default User' && (
+                  {isHost && (
                     <button
                       style={{
                         background: 'rgba(255, 0, 85, 0.05)',

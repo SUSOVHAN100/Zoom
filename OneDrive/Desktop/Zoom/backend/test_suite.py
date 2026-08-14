@@ -130,12 +130,19 @@ class TestZoomBackend(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_08_join_meeting_as_host(self):
-        """Verify joining as 'Default User' resolves is_host to True."""
+        """Verify joining as host resolves is_host to True only with headers, not just by display_name."""
         payload = {
             "meeting_id_or_token": self.instant_meeting_id,
             "display_name": "Default User"
         }
+        # Guest joining with display name 'Default User' should not become host
         response = self.client.post("/api/meetings/join", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["participant"]["is_host"])
+
+        # Host joining with display name and header should resolve is_host to True
+        response = self.client.post("/api/meetings/join", json=payload, headers={"X-User-Id": "1"})
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data["participant"]["is_host"])
@@ -202,9 +209,13 @@ class TestZoomBackend(unittest.TestCase):
         self.assertIn("Test Guest User", names)
 
     def test_14_participant_leave_and_removal(self):
-        """13. DELETE /api/participants/{id} soft-exits guest from room."""
-        # Evict participant
+        """13. DELETE /api/participants/{id} soft-exits guest from room. Requires host auth."""
+        # Evict participant without host authorization header should fail with 401 or 403
         response = self.client.delete(f"/api/participants/{self.guest_participant_id}")
+        self.assertIn(response.status_code, [401, 403])
+
+        # Evict participant with host authorization header should succeed
+        response = self.client.delete(f"/api/participants/{self.guest_participant_id}", headers={"X-User-Id": "1"})
         self.assertEqual(response.status_code, 200)
         
         # Verify no longer returned in active roster listing

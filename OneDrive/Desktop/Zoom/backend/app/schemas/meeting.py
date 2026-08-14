@@ -51,6 +51,7 @@ class MeetingResponse(BaseModel):
     status: str
     created_at: datetime
     meeting_link: Optional[MeetingLinkResponse] = None
+    host_participant: Optional[ParticipantResponse] = None
 
 class JoinResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

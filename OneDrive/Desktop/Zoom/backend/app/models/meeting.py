@@ -21,3 +21,10 @@ class Meeting(Base):
     host: Mapped["User"] = relationship(back_populates="meetings")
     meeting_link: Mapped[Optional["MeetingLink"]] = relationship(back_populates="meeting", uselist=False)
     participants: Mapped[List["Participant"]] = relationship(back_populates="meeting")
+
+    @property
+    def host_participant(self) -> Optional["Participant"]:
+        for p in self.participants:
+            if p.is_host:
+                return p
+        return None

@@ -58,3 +58,17 @@ def remove_participant(db: Session, participant_id: int) -> Participant:
         db.refresh(participant)
         
     return participant
+
+def rejoin_participant(db: Session, participant_id: int) -> Participant:
+    """
+    Reactivates a participant by setting left_at to None.
+    Throws a KeyError if the participant is not found.
+    """
+    participant = db.query(Participant).filter(Participant.id == participant_id).first()
+    if not participant:
+        raise KeyError(f"Participant with ID '{participant_id}' not found.")
+        
+    participant.left_at = None
+    db.commit()
+    db.refresh(participant)
+    return participant

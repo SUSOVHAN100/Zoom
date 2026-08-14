@@ -17,6 +17,7 @@ export interface Meeting {
   status: string;
   created_at: string;
   meeting_link?: MeetingLink;
+  host_participant?: Participant;
 }
 
 export interface Participant {
@@ -28,6 +29,12 @@ export interface Participant {
   is_host: boolean;
 }
 
+export interface UserStats {
+  total_users: number;
+  online_users: number;
+  in_meeting_users: number;
+}
+
 export interface JoinResponse {
   meeting: Meeting;
   participant: Participant;
@@ -35,10 +42,17 @@ export interface JoinResponse {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
+  const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
+  const authHeaders: Record<string, string> = {};
+  if (userId) {
+    authHeaders["X-User-Id"] = userId;
+  }
+
   const response = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders,
       ...(options?.headers || {}),
     },
   });
@@ -98,4 +112,12 @@ export const apiService = {
     request<Participant>(`/participants/${participantId}`, {
       method: "DELETE",
     }),
+
+  rejoinParticipant: (participantId: number) =>
+    request<Participant>(`/participants/${participantId}/rejoin`, {
+      method: "POST",
+    }),
+
+  getUserStats: () =>
+    request<UserStats>("/users/stats"),
 };

@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import UpcomingMeetings from '../components/UpcomingMeetings';
 import RecentMeetings from '../components/RecentMeetings';
+import { usePresence } from '../hooks/usePresence';
 
 export default function Home() {
+  const { stats } = usePresence();
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('user_id', '1');
+    }
     const updateClock = () => {
       const now = new Date();
       setTime(now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
@@ -252,6 +257,32 @@ export default function Home() {
             }}>
               {date || 'Loading date...'}
             </p>
+          </div>
+
+          {/* Real-time Presence Stats widget */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '12px'
+          }}>
+            <div className="glass-panel" style={{ padding: '16px 12px', textAlign: 'center' }}>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>
+                {stats.total_users}
+              </span>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Total Users</p>
+            </div>
+            <div className="glass-panel" style={{ padding: '16px 12px', textAlign: 'center' }}>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--success)', fontFamily: 'var(--font-display)' }}>
+                {stats.online_users}
+              </span>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Online Now</p>
+            </div>
+            <div className="glass-panel" style={{ padding: '16px 12px', textAlign: 'center' }}>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--primary)', fontFamily: 'var(--font-display)' }}>
+                {stats.in_meeting_users}
+              </span>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>In Meeting</p>
+            </div>
           </div>
 
           {/* Upcoming Meetings calendar schedule */}

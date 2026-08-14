@@ -44,10 +44,11 @@ async def root():
     return {"message": "Zoom Clone API is running"}
 
 # Register API Routers
-from app.routers import meetings_router, participants_router
+from app.routers import meetings_router, participants_router, users_router
 from app.websocket import websocket_router
 app.include_router(meetings_router, prefix="/api/meetings")
 app.include_router(participants_router, prefix="/api/participants")
+app.include_router(users_router, prefix="/api/users")
 app.include_router(websocket_router)
 
 @app.get("/api/health")

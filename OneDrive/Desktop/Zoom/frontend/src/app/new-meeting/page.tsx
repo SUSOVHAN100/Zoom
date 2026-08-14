@@ -17,6 +17,9 @@ export default function NewMeetingPage() {
       .then(data => {
         // Automatically set display name for the host (the seeded default user)
         sessionStorage.setItem('display_name', 'Default User');
+        if (data.host_participant) {
+          sessionStorage.setItem(`meeting_participant_${data.meeting_id}`, data.host_participant.id.toString());
+        }
         
         // Redirect directly to the meeting room page
         router.push(`/meeting/${data.meeting_id}`);
