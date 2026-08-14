@@ -12,11 +12,9 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.0"
       - key: DATABASE_URL
-        value: sqlite:////data/zoom_clone.db
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
+        fromDatabase:
+          name: zoomspace-db
+          property: connectionString
 
   # ─────────────────────────────────────────────
   # 2. Next.js Frontend (Static Site)
@@ -34,3 +32,12 @@ services:
         value: https://zoomspace-backend.onrender.com/api
       - key: NEXT_PUBLIC_WS_URL
         value: wss://zoomspace-backend.onrender.com
+
+# ─────────────────────────────────────────────
+# 3. PostgreSQL Database (Free Tier)
+# ─────────────────────────────────────────────
+databases:
+  - name: zoomspace-db
+    databaseName: zoomspace
+    user: zoomspace_user
+    plan: free

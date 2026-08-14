@@ -2,21 +2,21 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-# Use the working directory for SQLite - always writable on Render and locally.
-# Render's working directory is /opt/render/project/src/
-# Override with DATABASE_URL env var only if it's NOT pointing to /data (which requires a paid disk).
 _env_url = os.environ.get("DATABASE_URL", "")
-if _env_url and "/data" not in _env_url:
-    SQLALCHEMY_DATABASE_URL = _env_url
+
+if _env_url:
+    # Render provides "postgres://..." but SQLAlchemy requires "postgresql://..."
+    SQLALCHEMY_DATABASE_URL = _env_url.replace("postgres://", "postgresql://", 1)
 else:
-    # Default: relative path, works locally and on Render free tier
+    # Local development fallback: use SQLite (no setup required)
     SQLALCHEMY_DATABASE_URL = "sqlite:///./zoom_clone.db"
 
+# SQLite requires check_same_thread=False; PostgreSQL does not support it
+is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
+connect_args = {"check_same_thread": False} if is_sqlite else {}
+
 # SQLAlchemy engine
-# connect_args={"check_same_thread": False} is required only for SQLite
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 
 # SessionLocal class for creating database sessions
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
